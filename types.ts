@@ -15,16 +15,24 @@ export type BottomTabParamList = {
   RentaFija: undefined;
 };
 
-export type UserData = {
-  id: string;
-  nombre: string;
-  email?: string;
-  saldoTotal: number;
-  saldoTrading: number;
-  saldoInversiones: number;
+export interface UserData {
+  uid: string;
+  correo: string;
+  displayName: string;
+  photoURL: string;
+  rank: string;
+  score: number;
+  nivel?: string; // si lo agregas más adelante
   saldoRentaFija: number;
-  gananciasAcumuladas: number;
-  operacionesRealizadas: number;
-  nivel?: string; // básico, intermedio, avanzado
-};
-
+  saldoInversiones: number;
+  saldoTrading: number;
+  saldoTotal: number;
+  gananciasRentaFija: number;
+  gananciasInversiones: number;
+  gananciasTrading: number;
+  inversiones: string[];           // actualmente son array de string vacías
+  operacionesTrading: string[];    // igual que arriba
+  historialLogros: string[];       // igual que arriba
+  createdAt?: any;
+  updatedAt?: any;
+}
