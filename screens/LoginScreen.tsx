@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  Button,
-  StyleSheet,
   TextInput,
   Alert,
   Pressable,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -16,9 +15,13 @@ import {
 } from 'firebase/auth';
 import { auth, db } from '../firebaseConfig';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { BottomTabParamList } from '../types';
+
+// 👇 Esto soluciona el error: 'Inicio' not assignable to 'never'
 
 export default function LoginScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<BottomTabNavigationProp<BottomTabParamList>>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
@@ -26,11 +29,13 @@ export default function LoginScreen() {
   const handleAuth = async () => {
     try {
       let userCredential;
+
       if (isRegistering) {
         userCredential = await createUserWithEmailAndPassword(auth, email, password);
-
         const user = userCredential.user;
+
         const saldoInicial = 100000;
+
         await setDoc(doc(db, 'usuarios', user.uid), {
           uid: user.uid,
           correo: user.email,
@@ -97,10 +102,7 @@ export default function LoginScreen() {
         </Text>
       </Pressable>
 
-      <Text
-        style={styles.toggleText}
-        onPress={() => setIsRegistering(!isRegistering)}
-      >
+      <Text style={styles.toggleText} onPress={() => setIsRegistering(!isRegistering)}>
         {isRegistering
           ? '¿Ya tienes cuenta? Inicia sesión'
           : '¿No tienes cuenta? Regístrate'}

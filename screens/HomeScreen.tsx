@@ -56,7 +56,7 @@ useEffect(() => {
       <Text style={styles.username}>
         👋 Hola, {userData?.displayName || 'Usuario'}
       </Text>
-      <Text style={styles.info}>🎯 Nivel: {userData?.nivel || '---'}</Text>
+      <Text style={styles.info}>🎯 Rank: {userData?.rank || '---'}</Text>
       <Text style={styles.info}>🏅 Score: {userData?.score ?? 0}</Text>
 
 
