@@ -1,132 +1,151 @@
-import { View, Text, TextInput, StyleSheet, Pressable, Alert } from 'react-native';
-import { auth } from '../firebaseConfig';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
-import React, { useState, useEffect } from 'react';
-import { guardarUsuarioGoogle } from '../services/firebaseUser';
-
-
-
-WebBrowser.maybeCompleteAuthSession();
-
-
+import { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  Button,
+  StyleSheet,
+  TextInput,
+  Alert,
+  Pressable,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+} from 'firebase/auth';
+import { auth, db } from '../firebaseConfig';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function LoginScreen() {
+  const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
-const [request, response, promptAsync] = Google.useAuthRequest({
-  clientId: 'TU_CLIENT_ID_WEB', // Web Client ID desde Firebase > Auth > Google
-});
-
-useEffect(() => {
-  if (response?.type === 'success') {
-    const { id_token } = (response.authentication || {}) as { id_token?: string };
-    if (id_token) {
-      const credential = GoogleAuthProvider.credential(id_token);
-      signInWithCredential(auth, credential)
-        .then(async (userCred) => {
-          const user = userCred.user;
-          const nombre = user.displayName ?? 'Usuario';
-          const email = user.email ?? 'sin-email';
-          await guardarUsuarioGoogle(user.uid, nombre, email);
-          console.log('Usuario de Google guardado en Firestore');
-        })
-        .catch((err) => console.log('Error al autenticar con Google:', err));
-    }
-  }
-}, [response]);
-
 
   const handleAuth = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Por favor ingresa email y contraseña.');
-      return;
-    }
-
     try {
+      let userCredential;
       if (isRegistering) {
-        await createUserWithEmailAndPassword(auth, email, password);
-        Alert.alert('Registro exitoso', '¡Bienvenido!');
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+        const user = userCredential.user;
+        const saldoInicial = 100000;
+        await setDoc(doc(db, 'usuarios', user.uid), {
+          uid: user.uid,
+          correo: user.email,
+          displayName: 'Jugador anónimo',
+          photoURL: 'https://example.com/default.png',
+          score: 0,
+          rank: 'Novato',
+          saldoTotal: saldoInicial,
+          saldoRentaFija: 0,
+          saldoInversiones: 0,
+          saldoTrading: 0,
+          gananciasRentaFija: 0,
+          gananciasInversiones: 0,
+          gananciasTrading: 0,
+          inversiones: [],
+          operacionesTrading: [],
+          historialLogros: [],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
-        Alert.alert('Ingreso exitoso', 'Bienvenido de nuevo');
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
       }
+
+      navigation.navigate('Inicio');
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
   };
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        navigation.navigate('Inicio');
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{isRegistering ? 'Crear cuenta' : 'Iniciar sesión'}</Text>
+      <Text style={styles.title}>Simulador de Portafolio</Text>
 
       <TextInput
-        placeholder="Email"
-        style={styles.input}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        onChangeText={setEmail}
+        placeholder="Correo electrónico"
         value={email}
+        onChangeText={setEmail}
+        style={styles.input}
+        keyboardType="email-address"
+        autoCapitalize="none"
       />
-
       <TextInput
         placeholder="Contraseña"
+        value={password}
+        onChangeText={setPassword}
         style={styles.input}
         secureTextEntry
-        onChangeText={setPassword}
-        value={password}
       />
 
       <Pressable style={styles.button} onPress={handleAuth}>
         <Text style={styles.buttonText}>
-          {isRegistering ? 'Registrarse' : 'Entrar'}
+          {isRegistering ? 'Registrarse' : 'Iniciar sesión'}
         </Text>
       </Pressable>
 
-      <Pressable onPress={() => setIsRegistering(!isRegistering)}>
-        <Text style={styles.toggle}>
-          {isRegistering
-            ? '¿Ya tienes cuenta? Inicia sesión'
-            : '¿No tienes cuenta? Regístrate'}
-        </Text>
-      </Pressable>
-      <Pressable
-  style={[styles.button, { backgroundColor: '#db4437' }]}
-  onPress={() => promptAsync()}
->
-  <Text style={styles.buttonText}>Entrar con Google</Text>
-</Pressable>
-
+      <Text
+        style={styles.toggleText}
+        onPress={() => setIsRegistering(!isRegistering)}
+      >
+        {isRegistering
+          ? '¿Ya tienes cuenta? Inicia sesión'
+          : '¿No tienes cuenta? Regístrate'}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center' },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 30, textAlign: 'center' },
-  input: {
+  container: {
+    flex: 1,
     backgroundColor: '#f3f4f6',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    borderColor: '#d1d5db',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 24,
+    color: '#1f2937',
+    textAlign: 'center',
+  },
+  input: {
+    backgroundColor: '#fff',
     borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
   },
   button: {
     backgroundColor: '#2563eb',
-    padding: 15,
+    padding: 14,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 8,
   },
-  buttonText: { color: 'white', fontWeight: '600', fontSize: 16 },
-  toggle: {
-    color: '#1d4ed8',
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  toggleText: {
+    marginTop: 16,
+    color: '#2563eb',
     textAlign: 'center',
-    marginTop: 20,
-    textDecorationLine: 'underline',
+    fontWeight: '500',
   },
 });

@@ -1,4 +1,5 @@
 // types.ts
+import { Timestamp } from 'firebase/firestore';
 
 export type RootStackParamList = {
   Inicio: undefined;      // Puede ser el wrapper del BottomTabs
@@ -20,19 +21,19 @@ export interface UserData {
   correo: string;
   displayName: string;
   photoURL: string;
-  rank: string;
   score: number;
-  nivel?: string; // si lo agregas más adelante
+  rank: string;
+  saldoTotal: number;
   saldoRentaFija: number;
   saldoInversiones: number;
   saldoTrading: number;
-  saldoTotal: number;
   gananciasRentaFija: number;
   gananciasInversiones: number;
   gananciasTrading: number;
-  inversiones: string[];           // actualmente son array de string vacías
-  operacionesTrading: string[];    // igual que arriba
-  historialLogros: string[];       // igual que arriba
-  createdAt?: any;
-  updatedAt?: any;
+  inversiones: string[];
+  operacionesTrading: string[];
+  historialLogros: string[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
+
