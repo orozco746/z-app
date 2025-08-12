@@ -58,7 +58,7 @@ export default function TradingScreen() {
             'Requisitos no cumplidos',
             'Para operar en Trading necesitas tener entre 70-100% en renta fija y 20-30% en inversiones.'
           );
-          navigation.navigate('Inicio');
+          navigation.navigate('Tabs', { screen: 'Inicio' });
           return;
         }
 

@@ -1,4 +1,3 @@
-// context/AuthContext.tsx
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '../firebaseConfig';
@@ -10,6 +9,7 @@ type AuthContextType = {
   userData: UserData | null;
   loading: boolean;
   logout: () => void;
+  refreshUserData: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -17,6 +17,7 @@ const AuthContext = createContext<AuthContextType>({
   userData: null,
   loading: true,
   logout: () => {},
+  refreshUserData: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -24,23 +25,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUserData = async (uid: string) => {
+    const docRef = doc(db, 'usuarios', uid);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      setUserData(snap.data() as UserData);
+    } else {
+      setUserData(null);
+    }
+  };
+
+  const refreshUserData = async () => {
+    if (user) {
+      await fetchUserData(user.uid);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
-
       if (firebaseUser) {
-        const docRef = doc(db, 'usuarios', firebaseUser.uid);
-        const snap = await getDoc(docRef);
-
-        if (snap.exists()) {
-          setUserData(snap.data() as UserData);
-        } else {
-          setUserData(null);
-        }
+        await fetchUserData(firebaseUser.uid);
       } else {
         setUserData(null);
       }
-
       setLoading(false);
     });
 
@@ -52,7 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, userData, loading, logout }}>
+    <AuthContext.Provider value={{ user, userData, loading, logout, refreshUserData }}>
       {children}
     </AuthContext.Provider>
   );

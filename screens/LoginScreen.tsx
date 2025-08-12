@@ -16,12 +16,13 @@ import {
 import { auth, db } from '../firebaseConfig';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { BottomTabParamList } from '../types';
+import { BottomTabParamList, RootStackParamList } from '../types';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 // 👇 Esto soluciona el error: 'Inicio' not assignable to 'never'
 
 export default function LoginScreen() {
-  const navigation = useNavigation<BottomTabNavigationProp<BottomTabParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
@@ -60,7 +61,8 @@ export default function LoginScreen() {
         userCredential = await signInWithEmailAndPassword(auth, email, password);
       }
 
-      navigation.navigate('Inicio');
+      navigation.navigate('Tabs', { screen: 'Inicio' });
+
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
@@ -69,7 +71,7 @@ export default function LoginScreen() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        navigation.navigate('Inicio');
+        navigation.navigate('Tabs', { screen: 'Inicio' });
       }
     });
 

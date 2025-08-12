@@ -2,11 +2,9 @@
 import { Timestamp } from 'firebase/firestore';
 
 export type RootStackParamList = {
-  Inicio: undefined;      // Puede ser el wrapper del BottomTabs
-  Simulador: undefined;   // (si tienes otra screen tipo quiz o detalle)
-  RentaFija: undefined;   // Sólo si la usas desde stack también
-  Trading: undefined;
-  Inversiones: undefined;
+  Login: undefined;
+  Cuestionario: undefined;
+  Tabs: { screen: keyof BottomTabParamList } | undefined;
 };
 
 export type BottomTabParamList = {
@@ -36,4 +34,3 @@ export interface UserData {
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
-
