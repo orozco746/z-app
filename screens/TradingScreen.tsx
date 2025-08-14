@@ -12,28 +12,56 @@ import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { UserData } from '../types';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { BottomTabParamList } from '../types';
-
-type NavigationProp = BottomTabNavigationProp<BottomTabParamList, 'Trading'>;
-
-const candles = [
-  { open: 100, high: 110, low: 95, close: 105 },
-  { open: 105, high: 112, low: 101, close: 102 },
-  { open: 102, high: 108, low: 100, close: 107 },
-  { open: 107, high: 115, low: 105, close: 110 },
-  { open: 110, high: 120, low: 109, close: 117 },
-];
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types';
+import { ALPHAVANTAGE_API_KEY } from '@env';
 
 const opciones = ['Largo', 'Corto', 'Esperar', 'No operar'];
 
 export default function TradingScreen() {
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [candles, setCandles] = useState<
+    Array<{ open: number; high: number; low: number; close: number }>
+  >([]);
   const [selectedDecision, setSelectedDecision] = useState<string | null>(null);
   const [stopLoss, setStopLoss] = useState('');
   const [takeProfit, setTakeProfit] = useState('');
-  const navigation = useNavigation<NavigationProp>();
-  const lastClose = candles[candles.length - 1].close;
+
+  // ✅ Cambiado: usamos Stack Navigation para evitar errores de tipo
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const lastClose = candles.length > 0 ? candles[candles.length - 1].close : 0;
+
+  // Traer velas históricas BTC del día anterior
+  const fetchBTCcandles = async () => {
+    try {
+      const res = await fetch(
+        `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=BTC&market=USD&interval=5min&outputsize=full&apikey=${ALPHAVANTAGE_API_KEY}`
+      );
+      const data = await res.json();
+      const timeSeries = data['Time Series Crypto (5min)'];
+      if (!timeSeries) return;
+
+      const ayer = new Date();
+      ayer.setDate(ayer.getDate() - 1);
+      const ayerStr = ayer.toISOString().slice(0, 10);
+
+      const velasAyer = Object.entries(timeSeries)
+        .filter(([datetime, _]) => datetime.startsWith(ayerStr))
+        .slice(-20)
+        .map(([datetime, values]: [string, any]) => ({
+          open: parseFloat(values['1. open']),
+          high: parseFloat(values['2. high']),
+          low: parseFloat(values['3. low']),
+          close: parseFloat(values['4. close']),
+        }));
+
+      setCandles(velasAyer);
+    } catch (error) {
+      console.error('Error fetching BTC candles:', error);
+    }
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -50,8 +78,10 @@ export default function TradingScreen() {
         const pctInversiones = (data.saldoInversiones / total) * 100;
 
         const cumple =
-          pctRentaFija >= 70 && pctRentaFija <= 100 &&
-          pctInversiones >= 20 && pctInversiones <= 30;
+          pctRentaFija >= 70 &&
+          pctRentaFija <= 100 &&
+          pctInversiones >= 20 &&
+          pctInversiones <= 30;
 
         if (!cumple) {
           Alert.alert(
@@ -67,6 +97,7 @@ export default function TradingScreen() {
     };
 
     fetchUser();
+    fetchBTCcandles();
   }, []);
 
   const resetForm = () => {
@@ -93,7 +124,11 @@ export default function TradingScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>🧠 Simulador de Trading</Text>
 
-      <CandlestickChart data={candles} width={340} height={260} />
+      {candles.length > 0 ? (
+        <CandlestickChart data={candles} width={340} height={260} />
+      ) : (
+        <Text>Cargando velas...</Text>
+      )}
 
       <Text style={styles.question}>¿Qué decisión tomarías en esta gráfica?</Text>
 
@@ -150,68 +185,15 @@ export default function TradingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, justifyContent: 'center', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
-  question: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 24,
-    marginBottom: 12,
-    color: '#1f2937',
-  },
-  optionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 12,
-    marginBottom: 20,
-  },
-  optionButton: {
-    backgroundColor: '#e5e7eb',
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    margin: 6,
-  },
-  optionText: {
-    fontSize: 16,
-    color: '#1f2937',
-    fontWeight: '500',
-  },
-  optionSelected: {
-    backgroundColor: '#2563eb',
-  },
-  optionTextSelected: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  formContainer: {
-    width: '100%',
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 10,
-    color: '#1f2937',
-  },
-  input: {
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
-  },
-  confirmButton: {
-    backgroundColor: '#16a34a',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  confirmText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
+  question: { fontSize: 16, fontWeight: '600', marginTop: 24, marginBottom: 12, color: '#1f2937' },
+  optionsContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginBottom: 20 },
+  optionButton: { backgroundColor: '#e5e7eb', paddingVertical: 12, paddingHorizontal: 18, borderRadius: 12, margin: 6 },
+  optionText: { fontSize: 16, color: '#1f2937', fontWeight: '500' },
+  optionSelected: { backgroundColor: '#2563eb' },
+  optionTextSelected: { color: '#fff', fontWeight: '700' },
+  formContainer: { width: '100%', marginTop: 20, paddingHorizontal: 20 },
+  inputLabel: { fontSize: 16, fontWeight: '500', marginBottom: 10, color: '#1f2937' },
+  input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, padding: 12, marginBottom: 12 },
+  confirmButton: { backgroundColor: '#16a34a', paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginTop: 10 },
+  confirmText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 });
